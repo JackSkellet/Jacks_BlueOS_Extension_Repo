@@ -1,0 +1,101 @@
+name: Publish BlueOS extension manifest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: "17 */6 * * *"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out this catalog
+        uses: actions/checkout@v4
+        with:
+          path: catalog
+
+      - name: Check out the BlueOS manifest generator
+        uses: actions/checkout@v4
+        with:
+          repository: bluerobotics/BlueOS-Extensions-Repository
+          ref: 5963f56b3570f740383e04cd07d50a66c1823073
+          path: upstream
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: upstream/pyproject.toml
+
+      - name: Validate catalog metadata
+        run: python catalog/scripts/validate_metadata.py catalog/repos
+
+      - name: Install the upstream generator
+        run: python -m pip install --disable-pip-version-check --editable ./upstream
+
+      - name: Prepare this catalog
+        env:
+          REPOSITORY_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          rm -rf upstream/repos
+          cp -a catalog/repos upstream/repos
+          python - "$REPOSITORY_URL/repos" <<'PY'
+          from pathlib import Path
+          import sys
+
+          path = Path("upstream/blueos_repository/consolidate.py")
+          source = path.read_text(encoding="utf-8")
+          old = 'REPO_ROOT_URL = "https://docs.bluerobotics.com/BlueOS-Extensions-Repository/repos"'
+          replacement = f'REPO_ROOT_URL = "{sys.argv[1]}"'
+          if old not in source:
+              raise SystemExit("Pinned upstream generator changed its repository URL declaration")
+          path.write_text(source.replace(old, replacement), encoding="utf-8")
+          PY
+
+      - name: Build manifest
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: |
+          cd upstream
+          python blueos_repository/consolidate.py
+          cd ..
+          mkdir site-build
+          cp upstream/manifest.json upstream/manifest.log site-build/
+          gzip --best --keep site-build/manifest.json
+          cp -a catalog/repos site-build/repos
+          cp catalog/site/index.html site-build/index.html
+          touch site-build/.nojekyll
+
+      - name: Upload generation log
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifest-generation-log
+          path: site-build/manifest.log
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-build
+
+      - name: Deploy GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

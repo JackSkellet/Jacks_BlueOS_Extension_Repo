@@ -1,0 +1,6 @@
+{
+  "name": "BNO085 Calibrator",
+  "website": "https://github.com/JackSkellet/BNO085-Calibrator",
+  "docker": "jackskellet/blueos-bno085-calibrator",
+  "description": "Guide BNO085 External AHRS calibration in BlueOS with live attitude, quaternion, IMU, message-rate, and calibration-coverage feedback."
+}

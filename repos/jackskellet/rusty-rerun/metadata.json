@@ -1,0 +1,6 @@
+{
+  "name": "Rusty Rerun",
+  "website": "https://github.com/JackSkellet/Rusty-Rerun",
+  "docker": "jackskellet/blueos-rusty-rerun",
+  "description": "View Rusty Pilot Rerun recordings live in BlueOS with focused flight, estimator, sensor, attitude, system, and world-reconstruction layouts."
+}

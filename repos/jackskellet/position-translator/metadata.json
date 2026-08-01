@@ -1,0 +1,6 @@
+{
+  "name": "Position Translator",
+  "website": "https://github.com/JackSkellet/Position_Translator",
+  "docker": "jackskellet/blueos-position-translator",
+  "description": "Translate Nortek Nucleus, Sonardyne SprintNav, and Waterlinked A50 navigation data into MAVLink input for ArduPilot."
+}
